@@ -12,26 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..app import service_manager
-from flask import Blueprint, abort
+from ..app import registry
+from flask import Blueprint, abort, Response
+
+import zlib
+import json
 
 controller = Blueprint("rest", __name__)
 
 
 @controller.route("/service/all")
 def get_all_services():
-    return {"services": service_manager.all()}
+    return {"services": registry.all()}
 
 
 @controller.route("/service/<service_name>")
 def get_service(service_name: str):
-    service = service_manager.get_service(service_name)
+    service = registry.get_service(service_name)
     return service.to_dict() if service else abort(404)
 
 
 @controller.route("/service/<service_name>/instance")
 def get_loadbalanced_instance(service_name: str):
-    service = service_manager.get_service(service_name)
+    service = registry.get_service(service_name)
 
     if not service:
         # 503 because service is None ONLY IF no instances are available
@@ -45,3 +48,11 @@ def get_loadbalanced_instance(service_name: str):
     service._last_instance_index += 1
 
     return f"{instance.host}:{instance.port}"
+
+
+@controller.route("/registry/fetch")
+def get_compressed_services():
+    json_data = json.dumps({"services": registry.all()}, indent=0)
+    resp = Response(zlib.compress(json_data.encode()))
+    resp.headers["Content-Type"] = "application/octet-stream"
+    return resp

@@ -15,12 +15,12 @@
 from flask_socketio import SocketIO
 from flask import Flask
 from .config import get_config
-from .service import ServiceManager
+from .registry import Registry
 
 import logging
 
 app = Flask(__name__)
-service_manager = ServiceManager()
+registry = Registry()
 config = get_config("./config.yml")
 socketio = SocketIO(app)
 

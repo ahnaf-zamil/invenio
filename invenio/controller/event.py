@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from flask_socketio import SocketIO
-from ..app import service_manager
+from ..app import registry
 from ..service import Instance
 from flask import session
 
@@ -41,9 +41,9 @@ def on_connect(payload: dict = None):
     session["service_name"] = service_name
     session["instance_id"] = instance_id
 
-    service = service_manager.get_service(service_name)
+    service = registry.get_service(service_name)
     if not service:
-        service = service_manager.create_service(service_name)
+        service = registry.create_service(service_name)
         logging.info(f"Created new service: {service_name}")
 
     instance = Instance(instance_id, instance_host, instance_port, instance_created_at)
@@ -54,14 +54,14 @@ def on_connect(payload: dict = None):
 
 
 def on_disconnect():
-    service = service_manager.get_service(session["service_name"])
+    service = registry.get_service(session["service_name"])
     instance_id = session["instance_id"]
 
     service.instances = list(filter(lambda x: x.id != instance_id, service.instances))
     logging.info(f"Removed instance '{instance_id}' from service '{service.name}'")
 
     if not len(service.instances):
-        service_manager.remove_service(service.name)
+        registry.remove_service(service.name)
         logging.info(f"Service '{service.name}' has no instances, removing...")
 
     session.clear()
